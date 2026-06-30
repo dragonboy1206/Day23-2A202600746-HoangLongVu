@@ -1,56 +1,4 @@
-"""Report generation helper.
-
-TODO(student): implement report rendering using MetricsReport data
-and the template in reports/lab_report_template.md.
-"""
-
-from __future__ import annotations
-
-import os
-from pathlib import Path
-
-from .metrics import MetricsReport
-
-
-def _detected_llm_provider() -> str:
-    if os.getenv("OPENAI_API_KEY"):
-        return "OpenAI qua biến môi trường OPENAI_API_KEY"
-    if os.getenv("GEMINI_API_KEY"):
-        return "Google Gemini qua biến môi trường GEMINI_API_KEY"
-    if os.getenv("ANTHROPIC_API_KEY"):
-        return "Anthropic qua biến môi trường ANTHROPIC_API_KEY"
-    return "Không phát hiện API key trong môi trường chạy"
-
-
-def render_report(metrics: MetricsReport) -> str:
-    """Render a complete lab report from metrics data.
-
-    TODO(student): Generate a report that includes:
-    1. Metrics summary table (total scenarios, success rate, retries, interrupts)
-    2. Per-scenario results table
-    3. Architecture explanation (your graph design, state schema, reducers)
-    4. Failure analysis (at least two failure modes you considered)
-    5. Improvement plan
-
-    Use reports/lab_report_template.md as your guide.
-
-    Return: formatted markdown string
-    """
-    scenario_rows = "\n".join(
-        "| {id} | {expected} | {actual} | {success} | {retries} | {interrupts} |".format(
-            id=item.scenario_id,
-            expected=item.expected_route,
-            actual=item.actual_route or "",
-            success="Có" if item.success else "Không",
-            retries=item.retry_count,
-            interrupts=item.interrupt_count,
-        )
-        for item in metrics.scenario_metrics
-    )
-    if not scenario_rows:
-        scenario_rows = "| Không có |  |  | Không | 0 | 0 |"
-
-    return f"""# Báo cáo Lab LangGraph Agentic Orchestration
+# Báo cáo Lab LangGraph Agentic Orchestration
 
 ## 1. Thông tin
 
@@ -74,7 +22,7 @@ Các nhánh chính:
 ## 2.1. LLM integration
 
 LLM (mô hình ngôn ngữ lớn) là hệ AI dùng để hiểu và sinh văn bản.
-Lần chạy report này phát hiện provider: {_detected_llm_provider()}.
+Lần chạy report này phát hiện provider: OpenAI qua biến môi trường OPENAI_API_KEY.
 
 - classify_node dùng structured output (đầu ra có cấu trúc) để ép LLM trả về route hợp lệ.
 - answer_node dùng grounded generation (sinh câu trả lời dựa trên ngữ cảnh) từ query,
@@ -108,18 +56,24 @@ Reducer (bộ gộp dữ liệu) quyết định field được ghi đè hay n�
 
 | Chỉ số | Giá trị |
 |---|---:|
-| Tổng số scenario | {metrics.total_scenarios} |
-| Tỉ lệ thành công | {metrics.success_rate:.2%} |
-| Số node trung bình | {metrics.avg_nodes_visited:.2f} |
-| Tổng retry | {metrics.total_retries} |
-| Tổng approval/HITL | {metrics.total_interrupts} |
-| Resume success | {"Có" if metrics.resume_success else "Không"} |
+| Tổng số scenario | 7 |
+| Tỉ lệ thành công | 100.00% |
+| Số node trung bình | 6.57 |
+| Tổng retry | 4 |
+| Tổng approval/HITL | 2 |
+| Resume success | Không |
 
 ## 5. Kết quả từng scenario
 
 | Scenario | Expected route | Actual route | Thành công | Retries | Interrupts |
 |---|---|---|---:|---:|---:|
-{scenario_rows}
+| S01_simple | simple | simple | Có | 0 | 0 |
+| S02_tool | tool | tool | Có | 0 | 0 |
+| S03_missing | missing_info | missing_info | Có | 0 | 0 |
+| S04_risky | risky | risky | Có | 0 | 1 |
+| S05_error | error | error | Có | 3 | 0 |
+| S06_delete | risky | risky | Có | 0 | 1 |
+| S07_dead_letter | error | error | Có | 1 | 0 |
 
 ## 6. Phân tích lỗi
 
@@ -145,11 +99,3 @@ theo từng lần chạy.
 Nếu có thêm một ngày, ưu tiên sản xuất hóa phần evaluate_node bằng LLM-as-judge,
 thêm test cho hidden scenario, và bổ sung giao diện HITL thật để người dùng
 duyệt/từ chối hành động rủi ro.
-"""
-
-
-def write_report(metrics: MetricsReport, output_path: str | Path) -> None:
-    """Write the rendered report to a file."""
-    path = Path(output_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_report(metrics), encoding="utf-8")
